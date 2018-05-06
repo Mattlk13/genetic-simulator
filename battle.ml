@@ -131,6 +131,13 @@ let create ~p1 ~p2 ~n1 ~n2 ~nn1 ~nn2 ~map ~view_needed =
 
 (* ========== Battle functions ========== *)
 
+(*
+create pop pop 20 20 gi gj (map 300)
+|> run_without_view
+
+generate_inputs allies.(i) allies p_allis enemies p_enemies map
+*)
+
 let generate_inputs individual allies p_allies enemies p_enemies map =
   (* First inputs *)
   let inputs = Array.make 150 0 in
@@ -178,8 +185,11 @@ let generate_inputs individual allies p_allies enemies p_enemies map =
   let k = ref 54 in
   for i = x - 3 to x + 3 do
     for j = y - 3 to y + 3 do
-      inputs.(!k) <- if contains (i,j) close_allies_positions then 1 else 0;
-      incr k
+      if (i <> x) && (j <> y) then
+      begin
+        inputs.(!k) <- if Array.mem (i,j) close_allies_positions then 1 else 0;
+        incr k
+      end
     done
   done;
 
@@ -188,8 +198,11 @@ let generate_inputs individual allies p_allies enemies p_enemies map =
   let k = ref 102 in
   for i = x - 3 to x + 3 do
     for j = y - 3 to y + 3 do
-      inputs.(!k) <- if contains (i,j) close_enemies_positions then 1 else 0;
-      incr k
+      if (i <> x) && (j <> y) then
+      begin
+        inputs.(!k) <- if Array.mem (i,j) close_enemies_positions then 1 else 0;
+        incr k
+      end
     done
   done;
 
@@ -260,13 +273,11 @@ let run_with_view battle =
     let after = Unix.gettimeofday() in
     let t = after -. before in
     let towait = max (delay -. t) 0. in
-    (* Unix.sleepf towait *)
-    Unix.sleep 1
+    Unix.sleepf towait
   done;
   View.close();
   let score1, score2 = compute_scores battle in
   (score1 > score2)
-
 
 let run_without_view battle =
   let play i =

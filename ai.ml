@@ -129,8 +129,9 @@ let learn () =
     | Some ai -> ai
   in
   while true do
-    for iteration = 0 to nb_iterations do
-      Printf.printf "%d\n" iteration;
+    for iteration = 0 to nb_iterations - 1 do
+      print_int iteration;
+      print_newline();
       shuffle brain;
       let k = ref 0 in
       let groups = ref [] in
