@@ -2,5 +2,5 @@
 
 let _ =
   Random.self_init();
-(*Ai.learn() *)
+  (*Ai.learn()*)
   Ai.play()

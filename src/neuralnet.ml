@@ -66,7 +66,7 @@ let randomise network =
 
 let activation_function x =
   (*if x >= 0. then x else 0. (* ReLU *) *)
-  1. /. (1. +. exp (-. x))
+  1. /. (1. +. exp (-. x)) (* sigmoid *)
 
 let activated_product ~matrix ~vector ~result =
   for i = 0 to Array.length matrix - 1 do

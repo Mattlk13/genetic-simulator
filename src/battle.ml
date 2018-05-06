@@ -4,7 +4,7 @@ open Individual
 open Map
 open View
 
-(* ========== Definitions ========== *)
+(* ========== Definitions and constants ========== *)
 
 (* total number of individuals created / total lifespan / sum of kills *)
 type stats = int * float * int
@@ -236,31 +236,35 @@ let tick battle =
   done
 
 let run_with_view battle =
-  let play i =
-    let allies = if i = 1 then battle.l1 else battle.l2 in
-    let enemies = if i = 1 then battle.l2 else battle.l1 in
-    let network = if i = 1 then battle.nn1 else battle.nn2 in
-    let p_allies = if i = 1 then battle.p1 else battle.p2 in
-    let p_enemies = if i = 1 then battle.p2 else battle.p1 in
+  let play n =
+    let allies = if n = 1 then battle.l1 else battle.l2 in
+    let enemies = if n = 1 then battle.l2 else battle.l1 in
+    let network = if n = 1 then battle.nn1 else battle.nn2 in
+    let p_allies = if n = 1 then battle.p1 else battle.p2 in
+    let p_enemies = if n = 1 then battle.p2 else battle.p1 in
     let map = battle.map in
     for i = 0 to Array.length allies - 1 do
       let inputs = generate_inputs allies.(i) allies p_allies enemies p_enemies map in
       Neuralnet.forward network inputs;
       (* debug *)
       let c = make_choice (Neuralnet.choose network) in
+      print_int n;
+      print_string " ";
+      print_int i;
       print_choice c;
+      print_newline();
       match c with
       | Up -> Individual.move_up allies.(i) map
       | Down -> Individual.move_down allies.(i)
       | Right -> Individual.move_right allies.(i) map
       | Left -> Individual.move_left allies.(i)
-      | Attack -> attack allies.(i) battle i
+      | Attack -> attack allies.(i) battle n
       | Eat -> Individual.eat allies.(i)
       | Copulate ->
         let new_allies, modified = Individual.copulate allies p_allies map in
         if modified then
         begin
-          if i = 1 then
+          if n = 1 then
             let x, y, z = battle.stats1 in
             battle.stats1 <- (x + 1, y, z)
           else
@@ -273,32 +277,37 @@ let run_with_view battle =
   in
   View.init();
   View.create battle.map.size;
-  for ticks = 0 to train_ticks - 1 do
-    let before = Unix.gettimeofday() in
-    play 1;
-    play 2;
-    tick battle;
-    View.reset();
-    View.draw_map battle.map;
-    View.draw battle.p1 battle.l1;
-    View.draw battle.p2 battle.l2;
-    View.update();
-    View.check_event();
-    let after = Unix.gettimeofday() in
-    let t = after -. before in
-    let towait = max (delay -. t) 0. in
-    Unix.sleepf towait
-  done;
+  let () =
+    try
+      for ticks = 0 to train_ticks - 1 do
+        let before = Unix.gettimeofday() in
+        play 1;
+        play 2;
+        tick battle;
+        View.reset();
+        View.draw_map battle.map;
+        View.draw battle.p1 battle.l1;
+        View.draw battle.p2 battle.l2;
+        View.update();
+        View.check_event();
+        let after = Unix.gettimeofday() in
+        let t = after -. before in
+        let towait = max (delay -. t) 0. in
+        Unix.sleepf towait;
+        if (Array.length battle.l1 = 0) || (Array.length battle.l2 = 0) then raise Exit
+      done
+    with Exit -> ()
+  in
   let score1, score2 = compute_scores battle in
   (score1 > score2)
 
 let run_without_view battle =
-  let play i =
-    let allies = if i = 1 then battle.l1 else battle.l2 in
-    let enemies = if i = 1 then battle.l2 else battle.l1 in
-    let network = if i = 1 then battle.nn1 else battle.nn2 in
-    let p_allies = if i = 1 then battle.p1 else battle.p2 in
-    let p_enemies = if i = 1 then battle.p2 else battle.p1 in
+  let play n =
+    let allies = if n = 1 then battle.l1 else battle.l2 in
+    let enemies = if n = 1 then battle.l2 else battle.l1 in
+    let network = if n = 1 then battle.nn1 else battle.nn2 in
+    let p_allies = if n = 1 then battle.p1 else battle.p2 in
+    let p_enemies = if n = 1 then battle.p2 else battle.p1 in
     let map = battle.map in
     for i = 0 to Array.length allies - 1 do
       let inputs = generate_inputs allies.(i) allies p_allies enemies p_enemies map in
@@ -308,13 +317,13 @@ let run_without_view battle =
       | Down -> Individual.move_down allies.(i)
       | Right -> Individual.move_right allies.(i) map
       | Left -> Individual.move_left allies.(i)
-      | Attack -> attack allies.(i) battle i
+      | Attack -> attack allies.(i) battle n
       | Eat -> Individual.eat allies.(i)
       | Copulate ->
         let new_allies, modified = Individual.copulate allies p_allies map in
         if modified then
         begin
-          if i = 1 then
+          if n = 1 then
             let x, y, z = battle.stats1 in
             battle.stats1 <- (x + 1, y, z)
           else
@@ -325,11 +334,16 @@ let run_without_view battle =
       | Collect -> Individual.collect allies.(i) battle.map
     done
   in
-  for ticks = 0 to train_ticks - 1 do
-    play 1;
-    play 2;
-    tick battle
-  done;
+  let () =
+    try
+      for ticks = 0 to train_ticks - 1 do
+        play 1;
+        play 2;
+        tick battle;
+        if (Array.length battle.l1 = 0) || (Array.length battle.l2 = 0) then raise Exit
+      done
+    with Exit -> ()
+  in
   let score1, score2 = compute_scores battle in
   (score1 > score2)
   
