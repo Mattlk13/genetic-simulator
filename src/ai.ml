@@ -17,11 +17,11 @@ let group2_size = 4
 let nb_best = nb_group2
 let nb_random = 40
 
-let nb_input = 150
+let nb_input = Battle.nb_input
 let nb_output = 9
 let nb_layers = 2
 
-let nb_iterations = 50
+let nb_iterations = 10
 
 let mutation_probability = 0.05
 
@@ -76,7 +76,7 @@ let read filename =
 
 let write ai filename =
   let oc = open_out filename in
-  let fwrite_line line = Array.map (Printf.printf "%f ") line in
+  let fwrite_line line = Array.map (Printf.fprintf oc "%f ") line in
   let fwrite_matrix matrix = Array.map fwrite_line matrix in
   let fwrite_network network = Array.map fwrite_matrix network.weights in
   let fwrite_ai ai =
@@ -145,6 +145,10 @@ let learn () =
         groups := (Array.of_list !group) :: !groups
       done;
       let best_ones = Battle.make_play !groups group1_size p1 popsize mapsize in
+      (* debug *)
+      print_newline();
+      print_endline "first qualification done";
+      print_newline();
       let k = ref 0 in
       let groups2 = ref [] in
       for i = 0 to nb_group2 - 1 do
@@ -156,6 +160,10 @@ let learn () =
         groups2 := (Array.of_list !group) :: !groups2
       done;
       let best_of_the_best = Battle.make_play !groups2 group2_size p1 popsize mapsize in
+      (* debug *)
+      print_newline();
+      print_endline "second qualification done";
+      print_newline();
       generate brain best_of_the_best
     done;
     print_endline "Writing to file...";

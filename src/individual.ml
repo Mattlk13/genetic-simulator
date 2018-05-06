@@ -63,7 +63,18 @@ let move_right individual map =
   let new_x = min (x + 1) (map.size - 1) in
   individual.position <- (new_x, y)
 
-let eat individual = ()
+let eat individual population map =
+  let x, y = individual.position in
+  let fx, fy = population.food_position in
+  if (x = fx) && (y = fy) then
+  begin
+    let base_food_quantity = map.cells.(fx).(fy) in
+    let current_food_level = individual.food_level in
+    let quantity_to_eat = individual.max_food_level - current_food_level in
+    let quantity_taken = min quantity_to_eat base_food_quantity in
+    map.cells.(fx).(fy) <- base_food_quantity - quantity_taken;
+    individual.food_level <- current_food_level + quantity_taken
+  end
 
 let copulate allies population map =
   let fx, fy = population.food_position in

@@ -22,6 +22,7 @@ type battle =
     with_view : bool;
   }
 
+let nb_input = 151
 let train_ticks = 2000
 let delay = 0.1
 
@@ -55,13 +56,6 @@ let print_choice c =
     | Collect -> "Collect"
   in print_string s
 
-let contains elem a =
-  try
-    for i = 0 to Array.length a - 1 do
-      if a.(i) = elem then raise Exit
-    done; false
-  with Exit -> true
-
 let without a ~id =
   let r = ref [] in
   for i = 0 to Array.length a - 1 do
@@ -83,7 +77,7 @@ let damage battle ~me ~enemy i =
     done
   end
   else
-    (* The enemy dies, the average lifespan of his population is modified and the kill counter on the other one are modified too *)
+    (* The enemy dies, the average lifespan of its population is modified and the kill counter on the other one are modified too *)
     if i = 1 then
     begin
       let x, y, z = battle.stats2 in
@@ -124,6 +118,51 @@ let attack individual battle i =
     damage battle individual enemy i
   end
 
+let regen individual battle i =
+  let newfoodlevel = individual.food_level - individual.food_decay in
+  if (newfoodlevel >= 0) then
+  begin
+    (* enough food level *)
+    individual.food_level <- newfoodlevel;
+    individual.hp <- min (individual.hp + individual.regen) individual.max_hp
+  end
+  else
+  begin
+    (* not enough food level *)
+    individual.food_level <- 0;
+    let newstocklevel = individual.food_stock + newfoodlevel in
+    if (newstocklevel >= 0) then
+    begin
+      (* enough food stock, still ok *)
+      individual.food_stock <- newstocklevel;
+      individual.hp <- min (individual.hp + individual.regen) individual.max_hp
+    end
+    else
+    begin
+      (* nothing left in the food stock, the individual will lose hp *)
+      let newhp = individual.hp - individual.regen in
+      if (newhp > 0) then
+        (* the individual will not die now, but it loses hp *)
+        individual.hp <- newhp
+      else
+      begin
+        (* the individual dies, the average lifespan of its population is modified *)
+        if i = 1 then
+        begin
+          let x, y, z = battle.stats1 in
+          battle.stats1 <- (x, y +. (float_of_int individual.lifespan), z);
+          battle.l1 <- without battle.l1 individual.id;
+        end
+        else
+        begin
+          let x, y, z = battle.stats2 in
+          battle.stats2 <- (x, y +. (float_of_int individual.lifespan), z);
+          battle.l2 <- without battle.l2 individual.id;
+        end
+      end
+    end
+  end
+
 (* ========== Battle creation ========== *)
 
 let create ~p1 ~p2 ~n1 ~n2 ~nn1 ~nn2 ~map ~view_needed =
@@ -148,7 +187,7 @@ let create ~p1 ~p2 ~n1 ~n2 ~nn1 ~nn2 ~map ~view_needed =
 
 let generate_inputs individual allies p_allies enemies p_enemies map =
   (* First inputs *)
-  let inputs = Array.make 150 0 in
+  let inputs = Array.make nb_input 0 in
   inputs.(0) <- individual.hp;
   inputs.(1) <- individual.food_level;
   inputs.(2) <- individual.food_stock;
@@ -162,15 +201,12 @@ let generate_inputs individual allies p_allies enemies p_enemies map =
   let k = ref 6 in
   for i = x - 3 to x + 3 do
     for j = y - 3 to y + 3 do
-      if (i <> x) && (j <> y) then
-      begin
-        let v =
-          if (i < 0) || (i > map.size - 1) || (j < 0) || (j > map.size - 1) then 0
-          else map.cells.(i).(j)
-        in
-        inputs.(!k) <- v;
-        incr k
-      end
+      let v =
+        if (i < 0) || (i > map.size - 1) || (j < 0) || (j > map.size - 1) then 0
+        else map.cells.(i).(j)
+      in
+      inputs.(!k) <- v;
+      incr k
     done
   done;
 
@@ -190,7 +226,7 @@ let generate_inputs individual allies p_allies enemies p_enemies map =
 
   (* Close allies inputs *)
   let close_allies_positions = filter_positions f allies in
-  let k = ref 54 in
+  let k = ref 55 in
   for i = x - 3 to x + 3 do
     for j = y - 3 to y + 3 do
       if (i <> x) && (j <> y) then
@@ -203,7 +239,7 @@ let generate_inputs individual allies p_allies enemies p_enemies map =
 
   (* Close enemies inputs *)
   let close_enemies_positions = filter_positions f enemies in
-  let k = ref 102 in
+  let k = ref 103 in
   for i = x - 3 to x + 3 do
     for j = y - 3 to y + 3 do
       if (i <> x) && (j <> y) then
@@ -235,54 +271,73 @@ let tick battle =
     battle.l2.(k).lifespan <- battle.l2.(k).lifespan + 1
   done
 
-let run_with_view battle =
-  let play n =
-    let allies = if n = 1 then battle.l1 else battle.l2 in
-    let enemies = if n = 1 then battle.l2 else battle.l1 in
-    let network = if n = 1 then battle.nn1 else battle.nn2 in
-    let p_allies = if n = 1 then battle.p1 else battle.p2 in
-    let p_enemies = if n = 1 then battle.p2 else battle.p1 in
-    let map = battle.map in
-    for i = 0 to Array.length allies - 1 do
-      let inputs = generate_inputs allies.(i) allies p_allies enemies p_enemies map in
-      Neuralnet.forward network inputs;
-      (* debug *)
-      let c = make_choice (Neuralnet.choose network) in
-      print_int n;
-      print_string " ";
-      print_int i;
-      print_choice c;
-      print_newline();
+let make_individuals_play battle n =
+  let allies = if n = 1 then battle.l1 else battle.l2 in
+  let enemies = if n = 1 then battle.l2 else battle.l1 in
+  let network = if n = 1 then battle.nn1 else battle.nn2 in
+  let p_allies = if n = 1 then battle.p1 else battle.p2 in
+  let p_enemies = if n = 1 then battle.p2 else battle.p1 in
+  let map = battle.map in
+  (* debug
+  print_string "POPULATION ";
+  print_int n;
+  print_newline(); *)
+  for i = 0 to Array.length allies - 1 do
+    let inputs = generate_inputs allies.(i) allies p_allies enemies p_enemies map in
+    Neuralnet.forward network inputs;
+    let c = make_choice (Neuralnet.choose network) in
+    (* debug
+    print_string ">> ";
+    print_int i;
+    print_string " - hp:";
+    print_int allies.(i).hp;
+    print_string " - fl:";
+    print_int allies.(i).food_level;
+    print_string " - fs:";
+    print_int allies.(i).food_stock;
+    print_string " - ";
+    print_choice c;
+    print_newline(); *)
+    let () =
       match c with
       | Up -> Individual.move_up allies.(i) map
       | Down -> Individual.move_down allies.(i)
       | Right -> Individual.move_right allies.(i) map
       | Left -> Individual.move_left allies.(i)
       | Attack -> attack allies.(i) battle n
-      | Eat -> Individual.eat allies.(i)
+      | Eat -> Individual.eat allies.(i) p_allies map
       | Copulate ->
         let new_allies, modified = Individual.copulate allies p_allies map in
         if modified then
         begin
           if n = 1 then
+          begin
             let x, y, z = battle.stats1 in
-            battle.stats1 <- (x + 1, y, z)
+            battle.stats1 <- (x + 1, y, z);
+            battle.l1 <- new_allies
+          end
           else
+          begin
             let x, y, z = battle.stats2 in
-            battle.stats2 <- (x + 1, y, z)
+            battle.stats2 <- (x + 1, y, z);
+            battle.l2 <- new_allies
+          end
         end
       | Store -> Individual.store allies.(i) battle.map
       | Collect -> Individual.collect allies.(i) battle.map
-    done
-  in
+    in
+    regen allies.(i) battle n
+  done
+
+let run_with_view battle =
   View.init();
   View.create battle.map.size;
   let () =
     try
       for ticks = 0 to train_ticks - 1 do
         let before = Unix.gettimeofday() in
-        play 1;
-        play 2;
+        make_individuals_play battle 1;
+        make_individuals_play battle 2;
         tick battle;
         View.reset();
         View.draw_map battle.map;
@@ -294,7 +349,7 @@ let run_with_view battle =
         let t = after -. before in
         let towait = max (delay -. t) 0. in
         Unix.sleepf towait;
-        if (Array.length battle.l1 = 0) || (Array.length battle.l2 = 0) then raise Exit
+        if (Array.length battle.l1 = 0) || (Array.length battle.l2 = 0) then raise Exit
       done
     with Exit -> ()
   in
@@ -302,51 +357,18 @@ let run_with_view battle =
   (score1 > score2)
 
 let run_without_view battle =
-  let play n =
-    let allies = if n = 1 then battle.l1 else battle.l2 in
-    let enemies = if n = 1 then battle.l2 else battle.l1 in
-    let network = if n = 1 then battle.nn1 else battle.nn2 in
-    let p_allies = if n = 1 then battle.p1 else battle.p2 in
-    let p_enemies = if n = 1 then battle.p2 else battle.p1 in
-    let map = battle.map in
-    for i = 0 to Array.length allies - 1 do
-      let inputs = generate_inputs allies.(i) allies p_allies enemies p_enemies map in
-      Neuralnet.forward network inputs;
-      match make_choice (Neuralnet.choose network) with
-      | Up -> Individual.move_up allies.(i) map
-      | Down -> Individual.move_down allies.(i)
-      | Right -> Individual.move_right allies.(i) map
-      | Left -> Individual.move_left allies.(i)
-      | Attack -> attack allies.(i) battle n
-      | Eat -> Individual.eat allies.(i)
-      | Copulate ->
-        let new_allies, modified = Individual.copulate allies p_allies map in
-        if modified then
-        begin
-          if n = 1 then
-            let x, y, z = battle.stats1 in
-            battle.stats1 <- (x + 1, y, z)
-          else
-            let x, y, z = battle.stats2 in
-            battle.stats2 <- (x + 1, y, z)
-        end
-      | Store -> Individual.store allies.(i) battle.map
-      | Collect -> Individual.collect allies.(i) battle.map
-    done
-  in
   let () =
     try
       for ticks = 0 to train_ticks - 1 do
-        play 1;
-        play 2;
+        make_individuals_play battle 1;
+        make_individuals_play battle 2;
         tick battle;
-        if (Array.length battle.l1 = 0) || (Array.length battle.l2 = 0) then raise Exit
+        if (Array.length battle.l1 = 0) || (Array.length battle.l2 = 0) then raise Exit
       done
     with Exit -> ()
   in
   let score1, score2 = compute_scores battle in
   (score1 > score2)
-  
 
 let run battle =
   if battle.with_view then
@@ -363,6 +385,12 @@ let get_best_one ~group ~size ~population ~popsize ~mapsize =
   let scores = Array.make size 0 in
   for i = 0 to size - 2 do
     for j = i + 1 to size - 1 do
+      (* debug *)
+      print_string "battle: ";
+      print_int i;
+      print_string " - ";
+      print_int j;
+      print_newline();
       if make_battle group.(i) group.(j) population popsize mapsize then
         scores.(i) <- scores.(i) + 1
       else
@@ -378,6 +406,8 @@ let get_best_one ~group ~size ~population ~popsize ~mapsize =
       max_index := i
     end
   done;
+  (* debug *)
+  print_endline "group done";
   group.(!max_index)
 
 let rec group_map f groups =
