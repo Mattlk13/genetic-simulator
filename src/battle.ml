@@ -286,8 +286,8 @@ let make_individuals_play battle n =
     let inputs = generate_inputs allies.(i) allies p_allies enemies p_enemies map in
     Neuralnet.forward network inputs;
     let c = make_choice (Neuralnet.choose network) in
-    (* debug
-    print_string ">> ";
+    (* debug *)
+    (* print_string ">> ";
     print_int i;
     print_string " - hp:";
     print_int allies.(i).hp;

@@ -19,7 +19,7 @@ let nb_random = 40
 
 let nb_input = Battle.nb_input
 let nb_output = 9
-let nb_layers = 2
+let nb_layers = 4
 
 let nb_iterations = 10
 
@@ -75,6 +75,7 @@ let read filename =
   else None
 
 let write ai filename =
+  if Sys.file_exists filename then Sys.remove filename;
   let oc = open_out filename in
   let fwrite_line line = Array.map (Printf.fprintf oc "%f ") line in
   let fwrite_matrix matrix = Array.map fwrite_line matrix in
@@ -131,7 +132,9 @@ let learn () =
   in
   while true do
     for iteration = 0 to nb_iterations - 1 do
+      print_string ">>>> iteration: ";
       print_int iteration;
+      print_newline();
       print_newline();
       shuffle brain;
       let k = ref 0 in

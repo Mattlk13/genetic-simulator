@@ -3,4 +3,4 @@
 let _ =
   Random.self_init();
   Ai.learn()
-  (*Ai.play()*)
+  (* Ai.play() *)
