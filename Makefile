@@ -3,4 +3,6 @@ SOURCES    = src/position.ml src/map.ml src/neuralnet.ml src/population.ml src/i
 LIBS       = bigarray unix sdl sdlmixer
 INCDIRS    = +sdl
 
+all: native-code
+
 include OCamlMakefile

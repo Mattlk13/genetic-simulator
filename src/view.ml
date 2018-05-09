@@ -27,19 +27,19 @@ let draw_map map =
       for j = 0 to map.size - 1 do
         let q = map.cells.(i).(j) in
         let s =
-          if (q > 90) then 9
-          else if (q > 80) then 8
-          else if (q > 70) then 7
-          else if (q > 60) then 6
-          else if (q > 50) then 5
-          else if (q > 40) then 4
-          else if (q > 30) then 3
-          else if (q > 20) then 2
+          if (q > 90) then 15
+          else if (q > 80) then 13
+          else if (q > 70) then 12
+          else if (q > 60) then 10
+          else if (q > 50) then 8
+          else if (q > 40) then 7
+          else if (q > 30) then 5
+          else if (q > 20) then 3
           else if (q > 10) then 1
           else 0
         in
-        let rx = i * 3 + 1 in
-        let ry = j * 3 + 1 in
+        let rx = i * 5 + 1 in
+        let ry = j * 5 + 1 in
         let r = Sdlvideo.rect rx ry s s in
         Sdlvideo.fill_rect ~rect:r surface color
       done
@@ -56,9 +56,9 @@ let draw population individuals =
     let color = Sdlvideo.map_RGB surface (r, g, b) in
     let f i =
       let x, y = i.position in
-      let rx = x * 3 + 1 in
-      let ry = y * 3 + 1 in
-      let r = Sdlvideo.rect rx ry 3 3 in
+      let rx = x * 5 + 1 in
+      let ry = y * 5 + 1 in
+      let r = Sdlvideo.rect rx ry 5 5 in
       Sdlvideo.fill_rect ~rect:r surface color
     in
     ignore (Array.map f individuals)
@@ -76,7 +76,7 @@ let init () =
   at_exit Sdlmixer.halt_music
 
 let create size =
-  let s = size * 3 + 2 in
+  let s = size * 5 + 2 in
   screen := Some (Sdlvideo.set_video_mode ~w:s ~h:s ~bpp:16 [`HWSURFACE; `DOUBLEBUF]);
   screen_size := s
 

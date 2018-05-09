@@ -6,12 +6,12 @@ open Battle
 
 type ai = neural_network array
 
-let size = 80
+let size = 160
 
-let nb_group1 = 20
+let nb_group1 = 40
 let group1_size = 4
 
-let nb_group2 = 5
+let nb_group2 = 10
 let group2_size = 4
 
 let nb_best = nb_group2
@@ -26,7 +26,7 @@ let nb_iterations = 10
 let mutation_probability = 0.05
 
 let popsize = 10
-let mapsize = 20
+let mapsize = 100
 let p1 = Population.create 100 5 25 20 20 1 (5,5) (5,10) 0x0000FF
 let p2 = Population.create 100 5 25 20 20 1 (15,15) (15,10) 0xFF0000
 
