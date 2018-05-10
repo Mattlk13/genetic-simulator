@@ -26,9 +26,9 @@ let nb_iterations = 10
 let mutation_probability = 0.05
 
 let popsize = 10
-let mapsize = 100
+let mapsize = 30
 let p1 = Population.create 100 5 25 20 20 1 (5,5) (5,10) 0x0000FF
-let p2 = Population.create 100 5 25 20 20 1 (15,15) (15,10) 0xFF0000
+let p2 = Population.create 100 5 25 20 20 1 (25,25) (25,20) 0xFF0000
 
 (* ========== AI creation and randomisation ========== *)
 

@@ -27,14 +27,10 @@ let draw_map map =
       for j = 0 to map.size - 1 do
         let q = map.cells.(i).(j) in
         let s =
-          if (q > 90) then 15
-          else if (q > 80) then 13
-          else if (q > 70) then 12
-          else if (q > 60) then 10
-          else if (q > 50) then 8
-          else if (q > 40) then 7
-          else if (q > 30) then 5
-          else if (q > 20) then 3
+          if (q > 90) then 5
+          else if (q > 70) then 4
+          else if (q > 50) then 3
+          else if (q > 30) then 2
           else if (q > 10) then 1
           else 0
         in

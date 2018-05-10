@@ -10,9 +10,9 @@ type map =
 let create ~size : map =
   let f _ =
     let r = Random.int 100 in
-    if (r < 5) then 20
+    if (r < 50) then 40
     else if (r < 90) then 0
-    else 5
+    else 10
   in
   let g _ = Array.init size f in
   { size = size;
