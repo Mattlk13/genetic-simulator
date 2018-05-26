@@ -25,8 +25,8 @@ let nb_iterations = 10
 
 let mutation_probability = 0.05
 
-let popsize = 10
-let mapsize = 30
+let popsize = 1
+let mapsize = 50
 let p1 = Population.create 100 5 25 20 20 1 (5,5) (5,10) 0x0000FF
 let p2 = Population.create 100 5 25 20 20 1 (25,25) (25,20) 0xFF0000
 
@@ -173,7 +173,7 @@ let learn () =
     write brain "ai.dat"
   done
 
-(* ========== Function to play a game with a map ========== *)
+(* ========== Function to play a game with a view ========== *)
 
 let play () =
   let brain =

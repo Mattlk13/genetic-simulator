@@ -22,7 +22,7 @@ type battle =
     with_view : bool;
   }
 
-let nb_input = 151
+let nb_input = 85
 let train_ticks = 2000
 let delay = 0.1
 
@@ -186,7 +186,7 @@ let create ~p1 ~p2 ~n1 ~n2 ~nn1 ~nn2 ~map ~view_needed =
 (* ========== Battle functions ========== *)
 
 let generate_inputs individual allies p_allies enemies p_enemies map =
-  (* First inputs *)
+  (* First inputs (6) *)
   let inputs = Array.make nb_input 0 in
   inputs.(0) <- individual.hp;
   inputs.(1) <- individual.food_level;
@@ -197,7 +197,7 @@ let generate_inputs individual allies p_allies enemies p_enemies map =
   inputs.(4) <- x - bx;
   inputs.(5) <- y - by;
 
-  (* Food map cells inputs *)
+  (* Food map cells inputs (49) *)
   let k = ref 6 in
   for i = x - 3 to x + 3 do
     for j = y - 3 to y + 3 do
@@ -209,45 +209,58 @@ let generate_inputs individual allies p_allies enemies p_enemies map =
       incr k
     done
   done;
-
-  (* Filter function *)
-  let f ind =
+  
+  let get_distances ind =
     let xi, yi = ind.position in
-    (xi >= x - 3) && (xi <= x + 3) && (yi >= y - 3) && (yi <= y + 3) && (xi <> x) && (yi <> y)
-  in
-  let filter_positions p a =
-    let r = ref [] in
-    for i = 0 to Array.length a - 1 do
-      if p a.(i) then
-        r := a.(i).position :: !r
-    done;
-    Array.of_list !r
+    let dx = x - xi in
+    let dy = y - yi in
+    let d = abs dx + abs dy in
+    (ind, dx, dy, d)
   in
 
-  (* Close allies inputs *)
-  let close_allies_positions = filter_positions f allies in
+  (* Comparison function : order by manhattan distance to individual *)
+  let cmp (i1, dx1, dy1, d1) (i2, dx2, dy2, d2) = compare d1 d2 in
+
+  (* Close allies inputs (15) *)
+  let allies_positions =
+    let t = Array.map get_distances (without allies individual.id) in
+    Array.sort cmp t;
+    Array.map (fun (i, dx, dy, d) -> (dx, dy)) t
+  in
   let k = ref 55 in
-  for i = x - 3 to x + 3 do
-    for j = y - 3 to y + 3 do
-      if (i <> x) && (j <> y) then
-      begin
-        inputs.(!k) <- if Array.mem (i,j) close_allies_positions then 1 else 0;
-        incr k
-      end
-    done
+  for i = 0 to 4 do
+    try
+      let dx, dy = Array.get allies_positions i in
+      inputs.(!k) <- dx; incr k;
+      inputs.(!k) <- dy; incr k;
+      inputs.(!k) <- 1; incr k
+    with
+    | Invalid_argument _ -> begin
+      inputs.(!k) <- 0; incr k;
+      inputs.(!k) <- 0; incr k;
+      inputs.(!k) <- 0; incr k
+    end
   done;
 
-  (* Close enemies inputs *)
-  let close_enemies_positions = filter_positions f enemies in
-  let k = ref 103 in
-  for i = x - 3 to x + 3 do
-    for j = y - 3 to y + 3 do
-      if (i <> x) && (j <> y) then
-      begin
-        inputs.(!k) <- if Array.mem (i,j) close_enemies_positions then 1 else 0;
-        incr k
-      end
-    done
+  (* Close enemies inputs (15) *)
+  let enemies_positions =
+    let t = Array.map get_distances enemies in
+    Array.sort cmp t;
+    Array.map (fun (i, dx, dy, d) -> (dx, dy)) t
+  in
+  let k = ref 70 in
+  for i = 0 to 4 do
+    try
+      let dx, dy = Array.get enemies_positions i in
+      inputs.(!k) <- dx; incr k;
+      inputs.(!k) <- dy; incr k;
+      inputs.(!k) <- 1; incr k
+    with
+    | Invalid_argument _ -> begin
+      inputs.(!k) <- 0; incr k;
+      inputs.(!k) <- 0; incr k;
+      inputs.(!k) <- 0; incr k
+    end
   done;
 
   Array.map float_of_int inputs

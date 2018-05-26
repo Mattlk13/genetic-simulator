@@ -43,24 +43,31 @@ let create (population : population) =
     food_decay = population.food_decay;
     position = population.spawn_position }
 
+(* Maximum speed of the individuals *)
+let max_speed = 5.0
+
 let move_up individual map =
   let x, y = individual.position in
-  let new_y = min (y + 1) (map.size - 1) in
+  let d = float_of_int individual.food_level /. float_of_int individual.max_food_level *. max_speed in
+  let new_y = min (y + truncate d) (map.size - 1) in
   individual.position <- (x, new_y)
 
 let move_down individual =
   let x, y = individual.position in
-  let new_y = max (y - 1) 0 in
+  let d = float_of_int individual.food_level /. float_of_int individual.max_food_level *. max_speed in
+  let new_y = max (y - truncate d) 0 in
   individual.position <- (x, new_y)
 
 let move_left individual =
   let x, y = individual.position in
-  let new_x = max (x - 1) 0 in
+  let d = float_of_int individual.food_level /. float_of_int individual.max_food_level *. max_speed in
+  let new_x = max (x - truncate d) 0 in
   individual.position <- (new_x, y)
 
 let move_right individual map =
   let x, y = individual.position in
-  let new_x = min (x + 1) (map.size - 1) in
+  let d = float_of_int individual.food_level /. float_of_int individual.max_food_level *. max_speed in
+  let new_x = min (x + truncate d) (map.size - 1) in
   individual.position <- (new_x, y)
 
 let eat individual population map =
