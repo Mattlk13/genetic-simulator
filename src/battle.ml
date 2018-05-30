@@ -392,7 +392,13 @@ let run battle =
 let make_battle a b population ~popsize ~mapsize =
   let m = Map.create mapsize in
   let battle = create population population popsize popsize a b m false in
-  run battle
+  (* run battle *)
+  (* total number of individuals created / total lifespan / sum of kills *)
+  (* debug *)
+  let res = run battle in
+  let (a, b, c), (d, e, f) = battle.stats1, battle.stats2 in
+  Printf.printf "(%d, %f, %d) (%d, %f, %d)\n" a b c d e f;
+  res
 
 let get_best_one ~group ~size ~population ~popsize ~mapsize =
   let scores = Array.make size 0 in
