@@ -2,6 +2,8 @@ open Population
 open Position
 open Map
 
+(* This file defines an individual in the game *)
+
 (* ========== Definition ========== *)
 
 type individual =
@@ -19,7 +21,7 @@ type individual =
     mutable position : position;
   }
 
-(* ========== Individual counter (unique ID) ========== *)
+(* ========== Individual counter (unique ID for each individual) ========== *)
 
 let counter = ref 0
 
@@ -28,6 +30,8 @@ let reset_counter () =
 
 (* ========== Individual creation ========== *)
 
+(* Creates an individual according to its population's stats *)
+(* val create : population -> individual *)
 let create (population : population) =
   incr counter;
   { id = !counter;
@@ -46,30 +50,38 @@ let create (population : population) =
 (* Maximum speed of the individuals *)
 let max_speed = 5.0
 
+(* The next 4 functions define displacements for an individual on a map, according to its speed *)
+
+(* val move_up : individual -> map -> unit *)
 let move_up individual map =
   let x, y = individual.position in
   let d = float_of_int individual.food_level /. float_of_int individual.max_food_level *. max_speed in
   let new_y = min (y + truncate d) (map.size - 1) in
   individual.position <- (x, new_y)
 
+(* val move_down : individual -> map -> unit *)
 let move_down individual =
   let x, y = individual.position in
   let d = float_of_int individual.food_level /. float_of_int individual.max_food_level *. max_speed in
   let new_y = max (y - truncate d) 0 in
   individual.position <- (x, new_y)
 
+(* val move_left : individual -> map -> unit *)
 let move_left individual =
   let x, y = individual.position in
   let d = float_of_int individual.food_level /. float_of_int individual.max_food_level *. max_speed in
   let new_x = max (x - truncate d) 0 in
   individual.position <- (new_x, y)
 
+(* val move_right : individual -> map -> unit *)
 let move_right individual map =
   let x, y = individual.position in
   let d = float_of_int individual.food_level /. float_of_int individual.max_food_level *. max_speed in
   let new_x = min (x + truncate d) (map.size - 1) in
   individual.position <- (new_x, y)
 
+(* Makes an individual eat food : it takes food from the base and regenerates the individual's food level *)
+(* val eat : individual -> population -> map -> unit *)
 let eat individual population map =
   let x, y = individual.position in
   let fx, fy = population.food_position in
@@ -83,6 +95,10 @@ let eat individual population map =
     individual.food_level <- current_food_level + quantity_taken
   end
 
+(* Creates a new individual if there is enough food in the base (population.max_food_level needed) *)
+(* Returns the new individual array (same if not enough food) *)
+(* It also returns a boolean (true if a new individual has been created, false otherwise) *)
+(* val copulate : individual array -> population -> map -> individual array * bool *)
 let copulate allies population map =
   let fx, fy = population.food_position in
   let popfood = map.cells.(fx).(fy) in
@@ -95,11 +111,15 @@ let copulate allies population map =
   end
   else (allies, false)
 
+(* The individual stores all of its food at its location *)
+(* val store : individual -> map -> unit *)
 let store individual map =
   let x, y = individual.position in
   map.cells.(x).(y) <- map.cells.(x).(y) + individual.food_stock;
   individual.food_stock <- 0
 
+(* The individual collects food on the map, according to the place it has (food_stock) *)
+(* val collect : individual -> map -> unit *)
 let collect individual map =
   let x, y = individual.position in
   let current_ind_stock = individual.food_stock in
@@ -108,19 +128,3 @@ let collect individual map =
   let quantity_taken = min current_map_stock space_available in
   map.cells.(x).(y) <- current_map_stock - quantity_taken;
   individual.food_stock <- current_ind_stock + quantity_taken
-
-(*
-1v1
-doit ramener sur la base pour manger
-bouffe sert à manger et se reproduire
-1 food rend 1 food level
-chaque tour où food level != 0 remonte hp de reg rate sinon descend hp de reg rate
-
-copulate crée un individu au spawn et consomme dans la base max food level de nourriture
-attack ennemi à 1 case
-
-manger remonte à max food level et consomme food stock
-
-on peut poser bouffe partout
-
-*)

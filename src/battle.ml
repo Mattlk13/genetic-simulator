@@ -4,11 +4,15 @@ open Individual
 open Map
 open View
 
+(* This file manages battles between populations *)
+
 (* ========== Definitions and constants ========== *)
 
+(* Heuristics ! *)
 (* total number of individuals created / total lifespan / sum of kills *)
 type stats = int * float * int
 
+(* Every battle contains the individuals from each population, and stats *)
 type battle =
   { p1 : population;
     mutable l1 : individual array;
@@ -22,12 +26,20 @@ type battle =
     with_view : bool;
   }
 
+(* Number of inputs in the neural networks *)
 let nb_input = 85
+
+(* Duration of battles when learning *)
 let train_ticks = 2000
+
+(* Time to wait before next tick when playing a game graphically (we need to have time to see) *)
 let delay = 0.1
 
+(* Different possible choices for an individual *)
 type choice = Up | Down | Right | Left | Attack | Eat | Copulate | Store | Collect
 
+(* Translates a number into a choice *)
+(* val make_choice : int -> choice *)
 let make_choice i =
   match i with
   | 0 -> Up
@@ -56,6 +68,8 @@ let print_choice c =
     | Collect -> "Collect"
   in print_string s
 
+(* Removes an individual from an array, knowing its ID *)
+(* val without : individual array -> id:int -> individual array *)
 let without a ~id =
   let r = ref [] in
   for i = 0 to Array.length a - 1 do
@@ -64,6 +78,10 @@ let without a ~id =
   done;
   Array.of_list !r
 
+(* The few next functions need an integer parameter i, to know which population the individual is from *)
+
+(* Function to deal damage to an enemy, and possibly kill it *)
+(* val damage : battle -> me:individual -> enemy:individual -> int -> unit *)
 let damage battle ~me ~enemy i =
   let dmg = me.attack_damage in
   let hp = max 0 (enemy.hp - dmg) in
@@ -84,7 +102,7 @@ let damage battle ~me ~enemy i =
       battle.stats2 <- (x, y +. (float_of_int enemy.lifespan), z);
       let x, y, z = battle.stats1 in
       battle.stats1 <- (x, y, z + 1);
-      battle.l2 <- without battle.l2 enemy.id;
+      battle.l2 <- without battle.l2 enemy.id
     end
     else
     begin
@@ -92,9 +110,12 @@ let damage battle ~me ~enemy i =
       battle.stats1 <- (x, y +. (float_of_int enemy.lifespan), z);
       let x, y, z = battle.stats2 in
       battle.stats2 <- (x, y, z + 1);
-      battle.l1 <- without battle.l1 enemy.id;
+      battle.l1 <- without battle.l1 enemy.id
     end
 
+
+(* Makes an individual attack its closest enemy *)
+(* val attack : individual -> battle -> int -> unit *)
 let attack individual battle i =
   let f (u,v) ind =
     let pos = ind.position in
@@ -118,6 +139,8 @@ let attack individual battle i =
     damage battle individual enemy i
   end
 
+(* The individual regenerates its health every tick, or loses health points if it does not have enough food *)
+(* val regen : individual -> battle -> int -> unit *)
 let regen individual battle i =
   let newfoodlevel = individual.food_level - individual.food_decay in
   if (newfoodlevel >= 0) then
@@ -165,6 +188,9 @@ let regen individual battle i =
 
 (* ========== Battle creation ========== *)
 
+(* Creates a battle with 2 populations, 2 sizes, 2 neural networks, a map *)
+(* and a boolean to know whether a view is to be displayed *)
+(* val create : p1:population -> p2:population -> n1:int -> n2:int -> nn1:neural_network -> nn2:neural_network -> map:map -> view_needed:bool *)
 let create ~p1 ~p2 ~n1 ~n2 ~nn1 ~nn2 ~map ~view_needed =
   let f1 _ = Individual.create p1 in
   let f2 _ = Individual.create p2 in
@@ -185,6 +211,8 @@ let create ~p1 ~p2 ~n1 ~n2 ~nn1 ~nn2 ~map ~view_needed =
 
 (* ========== Battle functions ========== *)
 
+(* Generates inputs for the neural network given data about the game *)
+(* val generate_inputs : individual -> individual array -> population -> individual array -> population -> map -> float array *)
 let generate_inputs individual allies p_allies enemies p_enemies map =
   (* First inputs (6) *)
   let inputs = Array.make nb_input 0 in
@@ -265,6 +293,8 @@ let generate_inputs individual allies p_allies enemies p_enemies map =
 
   Array.map float_of_int inputs
 
+(* This function lets us know which population has won, computing the scores from the heuristics *)
+(* val compute_scores : battle -> float * float *)
 let compute_scores battle =
   let x, y, kills = battle.stats1 in
   let average_lifespan = y /. (float_of_int x) in
@@ -276,6 +306,8 @@ let compute_scores battle =
   let score2 = (float_of_int alive_at_the_end) +. average_lifespan +. (float_of_int kills) in
   (score1, score2)
 
+(* Increments every alive individual's lifespan (actually applies a tick) *)
+(* val tick : battle -> unit *)
 let tick battle =
   for k = 0 to Array.length battle.l1 - 1 do
     battle.l1.(k).lifespan <- battle.l1.(k).lifespan + 1
@@ -284,6 +316,8 @@ let tick battle =
     battle.l2.(k).lifespan <- battle.l2.(k).lifespan + 1
   done
 
+(* Makes a whole population play (move, eat, attack...) and updates the stats accordingly *)
+(* val make_individuals_play : battle -> int -> unit *)
 let make_individuals_play battle n =
   let allies = if n = 1 then battle.l1 else battle.l2 in
   let enemies = if n = 1 then battle.l2 else battle.l1 in
@@ -342,6 +376,10 @@ let make_individuals_play battle n =
     regen allies.(i) battle n
   done
 
+(* Runs a battle from the beginning to the end. It stops after train_ticks ticks or if a population is dead *)
+(* This version runs with a view, the one below does not start the view (runs faster to learn faster) *)
+(* Returns a boolean (has the first player won ?) *)
+(* val run_with_view : battle -> bool *)
 let run_with_view battle =
   View.init();
   View.create battle.map.size;
@@ -369,6 +407,7 @@ let run_with_view battle =
   let score1, score2 = compute_scores battle in
   (score1 > score2)
 
+(* val run_without_view : battle -> bool *)
 let run_without_view battle =
   let () =
     try
@@ -383,12 +422,16 @@ let run_without_view battle =
   let score1, score2 = compute_scores battle in
   (score1 > score2)
 
+(* This one is the general "run" function, it decides to start a view or not from the with_view attribute of the battle *)
+(* val run : battle -> bool *)
 let run battle =
   if battle.with_view then
     run_with_view battle
   else
     run_without_view battle
 
+(* Makes a battle between two neural networks *)
+(* val make_battle : neural_network -> neural_network -> population -> popsize:int -> mapsize:int -> bool *)
 let make_battle a b population ~popsize ~mapsize =
   let m = Map.create mapsize in
   let battle = create population population popsize popsize a b m false in
@@ -400,6 +443,8 @@ let make_battle a b population ~popsize ~mapsize =
   Printf.printf "(%d, %f, %d) (%d, %f, %d)\n" a b c d e f;
   res
 
+(* Finds out who is the best individual of a group (group battles as explained in ai.ml) *)
+(* val get_best_one : group:neural_network array -> size:int -> population:population -> popsize:int -> mapsize:int -> neural_network *)
 let get_best_one ~group ~size ~population ~popsize ~mapsize =
   let scores = Array.make size 0 in
   for i = 0 to size - 2 do
@@ -429,11 +474,17 @@ let get_best_one ~group ~size ~population ~popsize ~mapsize =
   print_endline "group done";
   group.(!max_index)
 
+(* Just a map function, working with functions taking a "group" named parameter *)
+(* val group_map : (f:'a -> 'b) -> 'a list -> 'b list *)
 let rec group_map f groups =
   match groups with
   | [] -> []
   | group :: r -> (f ~group:group) :: (group_map f r)
 
+(* NB : this map function is the key if we want to make the computations parallel *)
+
+(* This is called by the AI, it is the main function to get the best individuals from each group *)
+(* val make_play : groups:neural_network array list -> size:int -> population -> popsize:int -> mapsize:int -> neural_network array *)
 let make_play ~groups ~size population ~popsize ~mapsize =
   let f = get_best_one ~size:size ~population:population ~popsize:popsize ~mapsize:mapsize in
   Array.of_list (group_map f groups)

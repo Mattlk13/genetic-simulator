@@ -1,5 +1,7 @@
 (* ========== Definition ========== *)
 
+(* A map is a 2D matrix of integers (food quantity) *)
+
 type map =
   { size : int;
     cells : int array array;
@@ -7,6 +9,8 @@ type map =
 
 (* ========== Map creation ========== *)
 
+(* Creates a map and randomly adds food on it *)
+(* val create : size:int -> map *)
 let create ~size : map =
   let f _ =
     let r = Random.int 100 in

@@ -2,6 +2,8 @@ open Population
 open Individual
 open Map
 
+(* Old view.ml file, using ocamlsdl, but I cannot compile it anymore... *)
+
 let screen_size = ref 0
 let screen = ref None
 let music_filename = "toto-africa.mp3"

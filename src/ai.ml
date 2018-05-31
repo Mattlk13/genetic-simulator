@@ -2,41 +2,54 @@ open Population
 open Neuralnet
 open Battle
 
+(* This file contains the genetic algorithm, the file I/O functions and the learn/play functions *)
+
 (* ========== Definition and constants ========== *)
 
+(* An AI is an array of individuals, i.e. neural networks *)
 type ai = neural_network array
 
+(* Generation size *)
 let size = 160
 
+(* Number of individuals and size of group in first group phase *)
 let nb_group1 = 40
 let group1_size = 4
 
+(* Number of individuals and size of group in first group phase *)
 let nb_group2 = 10
 let group2_size = 4
 
+(* Number of best individuals to keep and number of random individuals to inject into the new generation *)
 let nb_best = nb_group2
 let nb_random = 40
 
+(* Number of inputs, hidden layers and outputs for each neural network *)
 let nb_input = Battle.nb_input
 let nb_output = 9
 let nb_layers = 4
 
+(* Number of generations to compute before writing the results to a file *)
 let nb_iterations = 10
 
+(* Probability for each weight to mutate *)
 let mutation_probability = 0.05
 
+(* Test population : number of individuals, map size, populations used *)
 let popsize = 1
 let mapsize = 50
 let p1 = Population.create 100 5 25 20 20 1 (5,5) (5,10) 0x0000FF
-let p2 = Population.create 100 5 25 20 20 1 (25,25) (25,20) 0xFF0000
+let p2 = Population.create 100 5 25 20 20 1 (45,45) (45,40) 0xFF0000
 
 (* ========== AI creation and randomisation ========== *)
 
+(* val create : unit -> ai *)
 let create () =
   let f _ = Neuralnet.create nb_input nb_output nb_layers in
   Array.init size f
 
 (* Durstenfeld shuffle O(n) *)
+(* val shuffle : ai -> unit *)
 let shuffle ai =
   let n = Array.length ai in
   for i = 0 to n - 2 do
@@ -48,6 +61,8 @@ let shuffle ai =
 
 (* ========== IO functions ========== *)
 
+(* Tries to create an AI containing the nb_best best individuals found in a file (the rest is random) *)
+(* val read : string -> ai option *)
 let read filename =
   if Sys.file_exists filename then
   begin
@@ -74,6 +89,8 @@ let read filename =
   end
   else None
 
+(* Writes the nb_best best individuals to a file, in order to be able to stop learning and start again later *)
+(* val write : ai -> string -> unit *)
 let write ai filename =
   if Sys.file_exists filename then Sys.remove filename;
   let oc = open_out filename in
@@ -90,6 +107,8 @@ let write ai filename =
 
 (* ========== Genetic algorithm functions ========== *)
 
+(* Makes a crossover between two neural networks and makes the weights mutate *)
+(* val crossover_mutate : neural_network -> neural_network -> neural_network -> unit *)
 let crossover_mutate a b result =
   for i_layer = 0 to nb_layers do
     let a_mat = a.weights.(i_layer) in
@@ -109,6 +128,8 @@ let crossover_mutate a b result =
     done
   done
 
+(* Generates an AI from nb_best individuals (by crossover / mutate and some at random...) *)
+(* val generate : ai -> neural_network array -> unit *)
 let generate ai best_individuals =
   for i = 0 to nb_best - 1 do
     ai.(i) <- best_individuals.(i)
@@ -124,6 +145,11 @@ let generate ai best_individuals =
     crossover_mutate a b ai.(i)
   done
 
+(* Learning function : *)
+(* - tries to read a file (not to start from zero) *)
+(* - infinite loop : making the individuals fight, selecting the best ones, creating a new generation... *)
+(* It saves the best ones to a file every nb_iterations generations *)
+(* val learn : unit -> unit *)
 let learn () =
   let brain =
     match read "ai.dat" with
@@ -175,6 +201,8 @@ let learn () =
 
 (* ========== Function to play a game with a view ========== *)
 
+(* Plays a game with a window displaying it, with a tick duration so we can actually see the game *)
+(* val play : unit -> unit *)
 let play () =
   let brain =
     match read "ai.dat" with

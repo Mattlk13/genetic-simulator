@@ -14,18 +14,26 @@ let max_weight = 50.
 
 (* ========== Useful functions ========== *)
 
+(* Returns a random weight *)
+(* val random_weight : unit -> float *)
 let random_weight () = (Random.float (2. *. max_weight)) -. max_weight
 
+(* Creates a random matrix *)
+(* val random_matrix : lines:int -> columns:int -> float array array *)
 let random_matrix ~lines ~columns =
   let f _ = random_weight() in
   let g _ = Array.init columns f in
   Array.init lines g
 
+(* Rounds a float (maybe I haven't looked right but didn't find this function in stdlib) *)
+(* val round : float -> int *)
 let round f =
   let ef = truncate f in
   let delta = f -. (float_of_int ef) in
   if (delta >= 0.5) then ef + 1 else ef
 
+(* Computes the dot product of two vectors *)
+(* val dot_product : float array -> float array -> float *)
 let dot_product u v =
   let r = ref 0. in
   for i = 0 to Array.length u - 1 do
@@ -33,8 +41,11 @@ let dot_product u v =
   done;
   !r
 
-(* ========== Neuronal network creation ========== *)
+(* ========== Neural network creation ========== *)
 
+(* Creates a random neural network *)
+(* The number of neurons of each layer decreases linearly *)
+(* val create : nb_input:int -> nb_output:int -> nb_layers:int -> neural_network *)
 let create ~nb_input ~nb_output ~nb_layers =
   let a = (float_of_int (nb_output - nb_input)) /. (float_of_int (nb_layers + 1)) in
   let b = float_of_int nb_input in
@@ -50,6 +61,8 @@ let create ~nb_input ~nb_output ~nb_layers =
     layers = l;
     weights = w }
 
+(* Randomises the weights in a neural network *)
+(* val randomise : neural_network -> unit *)
 let randomise network =
   for i_layer = 0 to network.nb_layers do
     let matrix = network.weights.(i_layer) in
@@ -64,21 +77,29 @@ let randomise network =
 
 (* ========== Neuronal network functions ========== *)
 
+(* Activation function : currently sigmoid *)
+(* val activation_function : float -> float *)
 let activation_function x =
   (* if x >= 0. then x else 0. *)
   1. /. (1. +. exp (-. x))
 
+(* Computes the next layer values from a layer and a weight matrix, then uses the activation function on the results *)
+(* val activated_product : matrix:float array array -> vector:float array -> result:float array -> unit *)
 let activated_product ~matrix ~vector ~result =
   for i = 0 to Array.length matrix - 1 do
     result.(i) <- activation_function (dot_product matrix.(i) vector)
   done
 
+(* Gets the outputs of a neural network given the inputs *)
+(* val forward : neural_network -> inputs:float array -> unit *)
 let forward network ~inputs =
   network.layers.(0) <- inputs;
   for i = 0 to network.nb_layers do
     activated_product network.weights.(i) network.layers.(i) network.layers.(i+1)
   done
 
+(* Makes a choice according to the outputs of a neural network (softmax) *)
+(* val choose : neural_network -> int *)
 let choose network =
   let exp_values = Array.map exp network.layers.(network.nb_layers + 1) in
   let total_exp = Array.fold_left (+.) 0. exp_values in
